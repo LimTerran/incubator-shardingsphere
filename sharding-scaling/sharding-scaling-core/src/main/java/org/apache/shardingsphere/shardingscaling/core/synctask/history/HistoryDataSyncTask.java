@@ -28,12 +28,12 @@ import org.apache.shardingsphere.shardingscaling.core.exception.SyncTaskExecuteE
 import org.apache.shardingsphere.shardingscaling.core.execute.engine.SyncTaskExecuteCallback;
 import org.apache.shardingsphere.shardingscaling.core.execute.executor.SyncExecutorGroup;
 import org.apache.shardingsphere.shardingscaling.core.execute.executor.channel.MemoryChannel;
-import org.apache.shardingsphere.shardingscaling.core.execute.executor.reader.Reader;
-import org.apache.shardingsphere.shardingscaling.core.execute.executor.reader.ReaderFactory;
+import org.apache.shardingsphere.shardingscaling.core.execute.executor.dumper.Dumper;
+import org.apache.shardingsphere.shardingscaling.core.execute.executor.dumper.DumperFactory;
 import org.apache.shardingsphere.shardingscaling.core.execute.executor.record.DataRecord;
 import org.apache.shardingsphere.shardingscaling.core.execute.executor.record.Record;
-import org.apache.shardingsphere.shardingscaling.core.execute.executor.writer.Writer;
-import org.apache.shardingsphere.shardingscaling.core.execute.executor.writer.WriterFactory;
+import org.apache.shardingsphere.shardingscaling.core.execute.executor.importer.Importer;
+import org.apache.shardingsphere.shardingscaling.core.execute.executor.importer.ImporterFactory;
 import org.apache.shardingsphere.shardingscaling.core.synctask.SyncTask;
 import org.apache.shardingsphere.underlying.common.database.metadata.DataSourceMetaData;
 
@@ -59,18 +59,18 @@ public final class HistoryDataSyncTask implements SyncTask {
     
     private AtomicLong syncedRows = new AtomicLong();
     
-    private Reader reader;
+    private Dumper dumper;
     
     public HistoryDataSyncTask(final SyncConfiguration syncConfiguration, final DataSourceManager dataSourceManager) {
         this.syncConfiguration = syncConfiguration;
         this.dataSourceManager = dataSourceManager;
-        syncTaskId = generateSyncTaskId(syncConfiguration.getReaderConfiguration());
+        syncTaskId = generateSyncTaskId(syncConfiguration.getDumperConfiguration());
     }
     
-    private String generateSyncTaskId(final RdbmsConfiguration readerConfiguration) {
-        DataSourceMetaData dataSourceMetaData = readerConfiguration.getDataSourceConfiguration().getDataSourceMetaData();
-        String result = String.format("history-%s-%s", null != dataSourceMetaData.getCatalog() ? dataSourceMetaData.getCatalog() : dataSourceMetaData.getSchema(), readerConfiguration.getTableName());
-        return null == readerConfiguration.getWhereCondition() ? result : result + "#" + readerConfiguration.getSpiltNum();
+    private String generateSyncTaskId(final RdbmsConfiguration dumperConfiguration) {
+        DataSourceMetaData dataSourceMetaData = dumperConfiguration.getDataSourceConfiguration().getDataSourceMetaData();
+        String result = String.format("history-%s-%s", null != dataSourceMetaData.getCatalog() ? dataSourceMetaData.getCatalog() : dataSourceMetaData.getSchema(), dumperConfiguration.getTableName());
+        return null == dumperConfiguration.getWhereCondition() ? result : result + "#" + dumperConfiguration.getSpiltNum();
     }
     
     @Override
@@ -86,11 +86,11 @@ public final class HistoryDataSyncTask implements SyncTask {
     }
     
     private void getEstimatedRows() {
-        DataSource dataSource = dataSourceManager.getDataSource(syncConfiguration.getReaderConfiguration().getDataSourceConfiguration());
+        DataSource dataSource = dataSourceManager.getDataSource(syncConfiguration.getDumperConfiguration().getDataSourceConfiguration());
         try (Connection connection = dataSource.getConnection()) {
             ResultSet resultSet = connection.prepareStatement(String.format("SELECT COUNT(*) FROM %s %s",
-                    syncConfiguration.getReaderConfiguration().getTableName(),
-                    syncConfiguration.getReaderConfiguration().getWhereCondition()))
+                    syncConfiguration.getDumperConfiguration().getTableName(),
+                    syncConfiguration.getDumperConfiguration().getWhereCondition()))
                     .executeQuery();
             resultSet.next();
             estimatedRows = resultSet.getInt(1);
@@ -100,15 +100,15 @@ public final class HistoryDataSyncTask implements SyncTask {
     }
     
     private void instanceSyncExecutors(final SyncExecutorGroup syncExecutorGroup) {
-        syncConfiguration.getReaderConfiguration().setTableNameMap(syncConfiguration.getTableNameMap());
-        reader = ReaderFactory.newInstanceJdbcReader(syncConfiguration.getReaderConfiguration(), dataSourceManager);
-        Writer writer = WriterFactory.newInstance(syncConfiguration.getWriterConfiguration(), dataSourceManager);
+        syncConfiguration.getDumperConfiguration().setTableNameMap(syncConfiguration.getTableNameMap());
+        dumper = DumperFactory.newInstanceJdbcDumper(syncConfiguration.getDumperConfiguration(), dataSourceManager);
+        Importer importer = ImporterFactory.newInstance(syncConfiguration.getImporterConfiguration(), dataSourceManager);
         MemoryChannel channel = instanceChannel();
-        reader.setChannel(channel);
-        writer.setChannel(channel);
+        dumper.setChannel(channel);
+        importer.setChannel(channel);
         syncExecutorGroup.setChannel(channel);
-        syncExecutorGroup.addSyncExecutor(reader);
-        syncExecutorGroup.addSyncExecutor(writer);
+        syncExecutorGroup.addSyncExecutor(dumper);
+        syncExecutorGroup.addSyncExecutor(importer);
     }
     
     private MemoryChannel instanceChannel() {
@@ -125,9 +125,9 @@ public final class HistoryDataSyncTask implements SyncTask {
     
     @Override
     public void stop() {
-        if (null != reader) {
-            reader.stop();
-            reader = null;
+        if (null != dumper) {
+            dumper.stop();
+            dumper = null;
         }
     }
     
