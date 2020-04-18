@@ -25,6 +25,7 @@ import org.apache.shardingsphere.underlying.common.metadata.schema.RuleSchemaMet
 import org.apache.shardingsphere.underlying.common.yaml.swapper.YamlSwapper;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -46,8 +47,8 @@ public final class RuleSchemaMetaDataYamlSwapper implements YamlSwapper<YamlRule
     @Override
     public RuleSchemaMetaData swap(final YamlRuleSchemaMetaData yaml) {
         SchemaMetaData configured = convertSchema(yaml.getConfiguredSchemaMetaData());
-        Map<String, SchemaMetaData> unconfigured = yaml.getUnconfiguredSchemaMetaDataMap().entrySet().stream()
-                .collect(Collectors.toMap(entry -> entry.getKey(), entry -> convertSchema(entry.getValue())));
+        Map<String, SchemaMetaData> unconfigured = null == yaml.getUnconfiguredSchemaMetaDataMap() ? Collections.emptyMap() : yaml.getUnconfiguredSchemaMetaDataMap().entrySet().stream()
+             .collect(Collectors.toMap(entry -> entry.getKey(), entry -> convertSchema(entry.getValue())));
         return new RuleSchemaMetaData(configured, unconfigured);
     }
 
@@ -60,7 +61,7 @@ public final class RuleSchemaMetaDataYamlSwapper implements YamlSwapper<YamlRule
     }
 
     private Collection<IndexMetaData> convertIndexes(final Map<String, YamlIndexMetaData> indexes) {
-        return indexes.values().stream().map(this::convertIndex).collect(Collectors.toList());
+        return null == indexes ? Collections.emptyList() : indexes.values().stream().map(this::convertIndex).collect(Collectors.toList());
     }
 
     private IndexMetaData convertIndex(final YamlIndexMetaData index) {

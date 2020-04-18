@@ -26,6 +26,7 @@ import org.apache.shardingsphere.core.rule.ShardingRule;
 import org.apache.shardingsphere.orchestration.core.common.event.ShardingRuleChangedEvent;
 import org.apache.shardingsphere.orchestration.core.common.rule.OrchestrationMasterSlaveRule;
 import org.apache.shardingsphere.orchestration.core.common.rule.OrchestrationShardingRule;
+import org.apache.shardingsphere.orchestration.core.facade.ShardingOrchestrationFacade;
 import org.apache.shardingsphere.orchestration.core.registrycenter.event.DisabledStateChangedEvent;
 import org.apache.shardingsphere.orchestration.core.registrycenter.schema.OrchestrationShardingSchema;
 import org.apache.shardingsphere.shardingproxy.backend.schema.LogicSchema;
@@ -89,6 +90,7 @@ public final class ShardingSchema extends LogicSchema {
         }
     }
     
+    @SuppressWarnings("unchecked")
     @Override
     public void refreshTableMetaData(final SQLStatementContext sqlStatementContext) throws SQLException {
         if (null == sqlStatementContext) {
@@ -97,6 +99,9 @@ public final class ShardingSchema extends LogicSchema {
         Optional<MetaDataRefreshStrategy> refreshStrategy = MetaDataRefreshStrategyFactory.newInstance(sqlStatementContext);
         if (refreshStrategy.isPresent()) {
             refreshStrategy.get().refreshMetaData(getMetaData(), sqlStatementContext, this::loadTableMetaData);
+            if (null != ShardingOrchestrationFacade.getInstance()) {
+                ShardingOrchestrationFacade.getInstance().getMetaDataCenter().persistMetaDataCenterNode(getName(), getMetaData().getSchema());
+            }
         }
     }
     

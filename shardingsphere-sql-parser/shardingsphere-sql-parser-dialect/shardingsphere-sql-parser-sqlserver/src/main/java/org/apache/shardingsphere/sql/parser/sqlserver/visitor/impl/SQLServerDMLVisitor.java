@@ -268,27 +268,7 @@ public final class SQLServerDMLVisitor extends SQLServerVisitor implements DMLVi
         }
         return result;
     }
-    
-    @SuppressWarnings("unchecked")
-    private Collection<SimpleTableSegment> getTableSegments(final Collection<SimpleTableSegment> tableSegments, final JoinedTableContext joinedTable) {
-        Collection<SimpleTableSegment> result = new LinkedList<>();
-        for (SimpleTableSegment tableSegment : ((CollectionValue<SimpleTableSegment>) visit(joinedTable)).getValue()) {
-            if (isTable(tableSegment, tableSegments)) {
-                result.add(tableSegment);
-            }
-        }
-        return result;
-    }
-    
-    private boolean isTable(final SimpleTableSegment owner, final Collection<SimpleTableSegment> tableSegments) {
-        for (SimpleTableSegment each : tableSegments) {
-            if (owner.getTableName().getIdentifier().getValue().equals(each.getAlias().orElse(null))) {
-                return false;
-            }
-        }
-        return true;
-    }
-    
+
     private boolean isDistinct(final SelectClauseContext ctx) {
         return ((BooleanLiteralValue) visit(ctx.duplicateSpecification())).getValue();
     }
@@ -449,8 +429,12 @@ public final class SQLServerDMLVisitor extends SQLServerVisitor implements DMLVi
         if (null != ctx.expr()) {
             ASTNode expr = visit(ctx.expr());
             if (expr instanceof PredicateSegment) {
-                PredicateSegment predicate = (PredicateSegment) expr;
-                result.setPredicateSegment(predicate);
+                AndPredicate andPredicate = new AndPredicate();
+                andPredicate.getPredicates().add((PredicateSegment) expr);
+                result.getAndPredicates().add(andPredicate);
+            }
+            if (expr instanceof OrPredicateSegment) {
+                result.getAndPredicates().addAll(((OrPredicateSegment) expr).getAndPredicates());
             }
         }
         if (null != ctx.USING()) {
@@ -458,13 +442,9 @@ public final class SQLServerDMLVisitor extends SQLServerVisitor implements DMLVi
             for (SQLServerStatementParser.ColumnNameWithSortContext cname :ctx.columnNames().columnNameWithSort()) {
                 columnSegmentList.add((ColumnSegment) visit(cname));
             }
-            result.setUsingColumns(columnSegmentList);
+            result.getUsingColumns().addAll(columnSegmentList);
         }
         return result;
-    }
-    
-    private SimpleTableSegment createTableSegment(final OwnerSegment ownerSegment) {
-        return new SimpleTableSegment(ownerSegment.getStartIndex(), ownerSegment.getStopIndex(), ownerSegment.getIdentifier());
     }
     
     @Override
