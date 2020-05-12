@@ -18,79 +18,41 @@
 package org.apache.shardingsphere.core.rule;
 
 import lombok.Getter;
-import org.apache.shardingsphere.api.config.masterslave.LoadBalanceStrategyConfiguration;
+import org.apache.shardingsphere.api.config.masterslave.MasterSlaveGroupConfiguration;
 import org.apache.shardingsphere.api.config.masterslave.MasterSlaveRuleConfiguration;
-import org.apache.shardingsphere.spi.ShardingSphereServiceLoader;
-import org.apache.shardingsphere.spi.masterslave.MasterSlaveLoadBalanceAlgorithm;
-import org.apache.shardingsphere.spi.type.TypedSPIRegistry;
-import org.apache.shardingsphere.underlying.common.rule.BaseRule;
+import org.apache.shardingsphere.underlying.common.rule.DataSourceRoutedRule;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Databases and tables master-slave rule.
  */
 @Getter
-public final class MasterSlaveRule implements BaseRule {
+public final class MasterSlaveRule implements DataSourceRoutedRule {
     
-    static {
-        ShardingSphereServiceLoader.register(MasterSlaveLoadBalanceAlgorithm.class);
-    }
+    private final Map<String, MasterSlaveGroupRule> groups;
     
-    private final String name;
-    
-    private final String masterDataSourceName;
-    
-    private final List<String> slaveDataSourceNames;
-    
-    private final MasterSlaveLoadBalanceAlgorithm loadBalanceAlgorithm;
-    
-    private final MasterSlaveRuleConfiguration ruleConfiguration;
-    
-    private final Collection<String> disabledDataSourceNames = new HashSet<>();
-    
-    public MasterSlaveRule(final String name, final String masterDataSourceName, final List<String> slaveDataSourceNames, final MasterSlaveLoadBalanceAlgorithm loadBalanceAlgorithm) {
-        this.name = name;
-        this.masterDataSourceName = masterDataSourceName;
-        this.slaveDataSourceNames = slaveDataSourceNames;
-        this.loadBalanceAlgorithm = null == loadBalanceAlgorithm ? TypedSPIRegistry.getRegisteredService(MasterSlaveLoadBalanceAlgorithm.class) : loadBalanceAlgorithm;
-        ruleConfiguration = new MasterSlaveRuleConfiguration(name, masterDataSourceName, slaveDataSourceNames, 
-                new LoadBalanceStrategyConfiguration(this.loadBalanceAlgorithm.getType(), this.loadBalanceAlgorithm.getProperties()));
-    }
-    
-    public MasterSlaveRule(final MasterSlaveRuleConfiguration config) {
-        name = config.getName();
-        masterDataSourceName = config.getMasterDataSourceName();
-        slaveDataSourceNames = config.getSlaveDataSourceNames();
-        loadBalanceAlgorithm = createMasterSlaveLoadBalanceAlgorithm(config.getLoadBalanceStrategyConfiguration());
-        ruleConfiguration = config;
-    }
-    
-    private MasterSlaveLoadBalanceAlgorithm createMasterSlaveLoadBalanceAlgorithm(final LoadBalanceStrategyConfiguration loadBalanceStrategyConfiguration) {
-        return null == loadBalanceStrategyConfiguration ? TypedSPIRegistry.getRegisteredService(MasterSlaveLoadBalanceAlgorithm.class)
-                : TypedSPIRegistry.getRegisteredService(MasterSlaveLoadBalanceAlgorithm.class, loadBalanceStrategyConfiguration.getType(), loadBalanceStrategyConfiguration.getProperties());
-    }
-    
-    /**
-     * Judge whether contain data source name.
-     *
-     * @param dataSourceName data source name
-     * @return contain or not.
-     */
-    public boolean containDataSourceName(final String dataSourceName) {
-        return masterDataSourceName.equals(dataSourceName) || slaveDataSourceNames.contains(dataSourceName);
+    public MasterSlaveRule(final MasterSlaveRuleConfiguration masterSlaveRuleConfiguration) {
+        groups = new HashMap<>(masterSlaveRuleConfiguration.getGroups().size(), 1);
+        for (MasterSlaveGroupConfiguration each : masterSlaveRuleConfiguration.getGroups()) {
+            groups.put(each.getName(), new MasterSlaveGroupRule(each));
+        }
     }
     
     /**
      * Get slave data source names.
      *
+     * @param groupName master-slave group name
      * @return available slave data source names
      */
-    public List<String> getSlaveDataSourceNames() {
-        return slaveDataSourceNames.stream().filter(each -> !disabledDataSourceNames.contains(each)).collect(Collectors.toList());
+    public List<String> getSlaveDataSourceNames(final String groupName) {
+        return groups.containsKey(groupName) ? groups.get(groupName).getSlaveDataSourceNames() : Collections.emptyList();
     }
     
     /**
@@ -100,10 +62,30 @@ public final class MasterSlaveRule implements BaseRule {
      * @param isDisabled is disabled
      */
     public void updateDisabledDataSourceNames(final String dataSourceName, final boolean isDisabled) {
-        if (isDisabled) {
-            disabledDataSourceNames.add(dataSourceName);
-        } else {
-            disabledDataSourceNames.remove(dataSourceName);
+        for (Entry<String, MasterSlaveGroupRule> entry : groups.entrySet()) {
+            entry.getValue().updateDisabledDataSourceNames(dataSourceName, isDisabled);
         }
+    }
+    
+    /**
+     * Get disabled data source names.
+     * 
+     * @return disabled data source names
+     */
+    public Collection<String> getDisabledDataSourceNames() {
+        Collection<String> result = new HashSet<>();
+        for (Entry<String, MasterSlaveGroupRule> entry : groups.entrySet()) {
+            result.addAll(entry.getValue().getDisabledDataSourceNames());
+        }
+        return result;
+    }
+    
+    @Override
+    public Map<String, Collection<String>> getDataSourceMapper() {
+        Map<String, Collection<String>> result = new HashMap<>();
+        for (Entry<String, MasterSlaveGroupRule> entry : groups.entrySet()) {
+            result.putAll(entry.getValue().getDataSourceMapper());
+        }
+        return result;
     }
 }
