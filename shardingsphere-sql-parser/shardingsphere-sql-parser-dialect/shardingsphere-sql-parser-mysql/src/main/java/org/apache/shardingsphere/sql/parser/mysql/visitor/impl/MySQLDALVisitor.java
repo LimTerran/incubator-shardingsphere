@@ -19,11 +19,13 @@ package org.apache.shardingsphere.sql.parser.mysql.visitor.impl;
 
 import org.apache.shardingsphere.sql.parser.api.ASTNode;
 import org.apache.shardingsphere.sql.parser.api.visitor.statement.DALVisitor;
+import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.SetCharacterContext;
+import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.SetNameContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.VariableAssignContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.AnalyzeTableContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.CacheIndexContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.ChecksumTableContext;
-import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.DescContext;
+import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.ExplainContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.FlushContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.FromSchemaContext;
 import org.apache.shardingsphere.sql.parser.autogen.MySQLStatementParser.FromTableContext;
@@ -212,7 +214,7 @@ public final class MySQLDALVisitor extends MySQLVisitor implements DALVisitor {
     }
     
     @Override
-    public ASTNode visitDesc(final DescContext ctx) {
+    public ASTNode visitExplain(final ExplainContext ctx) {
         DescribeStatement result = new DescribeStatement();
         result.setTable((SimpleTableSegment) visit(ctx.tableName()));
         return result;
@@ -294,6 +296,39 @@ public final class MySQLDALVisitor extends MySQLVisitor implements DALVisitor {
             variableAssigns.add((VariableAssignSegment) visit(each));
         }
         result.getVariableAssigns().addAll(variableAssigns);
+        return result;
+    }
+    
+    @Override
+    public ASTNode visitSetName(final SetNameContext ctx) {
+        SetStatement result = new SetStatement();
+        if (null != ctx.characterSetName_() || null != ctx.DEFAULT()) {
+            VariableAssignSegment characterSet = new VariableAssignSegment();
+            VariableSegment variable = new VariableSegment();
+            variable.setVariable("charset");
+            characterSet.setVariable(variable);
+            String assignValue = (null != ctx.DEFAULT()) ? ctx.DEFAULT().getText() : ctx.characterSetName_().getText();
+            characterSet.setAssignValue(assignValue);
+        }
+        if (null != ctx.collationName_()) {
+            VariableAssignSegment collation = new VariableAssignSegment();
+            VariableSegment variable = new VariableSegment();
+            variable.setVariable(ctx.COLLATE().getText());
+            collation.setVariable(variable);
+            collation.setAssignValue(ctx.collationName_().getText());
+        }
+        return result;
+    }
+    
+    @Override
+    public ASTNode visitSetCharacter(final SetCharacterContext ctx) {
+        SetStatement result = new SetStatement();
+        VariableAssignSegment characterSet = new VariableAssignSegment();
+        VariableSegment variable = new VariableSegment();
+        String variableName = (null != ctx.CHARSET()) ? ctx.CHARSET().getText() : "charset";
+        variable.setVariable(variableName);
+        String assignValue = (null != ctx.DEFAULT()) ? ctx.DEFAULT().getText() : ctx.characterSetName_().getText();
+        characterSet.setAssignValue(assignValue);
         return result;
     }
     

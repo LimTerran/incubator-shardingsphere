@@ -115,7 +115,7 @@ unreservedWord
     | MASTER_HOST | MASTER_USER | MASTER_PASSWORD | MASTER_PORT | PRIVILEGE_CHECKS_USER | REQUIRE_ROW_FORMAT | MASTER_CONNECT_RETRY
     | MASTER_RETRY_COUNT | MASTER_DELAY | MASTER_HEARTBEAT_PERIOD | MASTER_AUTO_POSITION | REPLICATE_DO_DB | REPLICATE_IGNORE_DB
     | REPLICATE_DO_TABLE | REPLICATE_IGNORE_TABLE | REPLICATE_WILD_DO_TABLE | REPLICATE_WILD_IGNORE_TABLE | REPLICATE_REWRITE_DB
-    | GROUP_REPLICATION
+    | GROUP_REPLICATION | ENGINES
     ;
 
 variable
@@ -123,7 +123,7 @@ variable
     ;
 
 scope
-    : GLOBAL | PERSIST | PERSIST_ONLY | SESSION
+    : GLOBAL | PERSIST | PERSIST_ONLY | SESSION | LOCAL
     ;
 
 schemaName
@@ -578,4 +578,20 @@ ignoredIdentifiers_
 
 fieldOrVarSpec
     : LP_ (identifier (COMMA_ identifier)*)? RP_
+    ;
+
+notExistClause_
+    : (IF NOT EXISTS)?
+    ;
+
+existClause_
+    : (IF EXISTS)?
+    ;
+
+pattern
+    : STRING_
+    ;
+
+connectionId_
+    : NUMBER_
     ;
