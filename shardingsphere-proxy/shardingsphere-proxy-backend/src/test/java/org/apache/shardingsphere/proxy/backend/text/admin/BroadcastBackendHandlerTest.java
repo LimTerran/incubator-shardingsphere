@@ -18,13 +18,18 @@
 package org.apache.shardingsphere.proxy.backend.text.admin;
 
 import lombok.SneakyThrows;
-import org.apache.shardingsphere.proxy.backend.MockShardingSphereSchemasUtil;
+import org.apache.shardingsphere.infra.auth.Authentication;
+import org.apache.shardingsphere.infra.config.properties.ConfigurationProperties;
+import org.apache.shardingsphere.kernel.context.SchemaContext;
+import org.apache.shardingsphere.kernel.context.SchemaContexts;
 import org.apache.shardingsphere.proxy.backend.communication.DatabaseCommunicationEngine;
 import org.apache.shardingsphere.proxy.backend.communication.DatabaseCommunicationEngineFactory;
 import org.apache.shardingsphere.proxy.backend.communication.jdbc.connection.BackendConnection;
 import org.apache.shardingsphere.proxy.backend.response.BackendResponse;
 import org.apache.shardingsphere.proxy.backend.response.error.ErrorResponse;
 import org.apache.shardingsphere.proxy.backend.response.update.UpdateResponse;
+import org.apache.shardingsphere.proxy.backend.schema.ProxySchemaContexts;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -32,12 +37,16 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.lang.reflect.Field;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,9 +63,17 @@ public final class BroadcastBackendHandlerTest {
     @Mock
     private DatabaseCommunicationEngine databaseCommunicationEngine;
     
+    @Before
+    @SneakyThrows(ReflectiveOperationException.class)
+    public void setUp() {
+        Field schemaContexts = ProxySchemaContexts.getInstance().getClass().getDeclaredField("schemaContexts");
+        schemaContexts.setAccessible(true);
+        schemaContexts.set(ProxySchemaContexts.getInstance(), new SchemaContexts(getSchemaContextMap(), new ConfigurationProperties(new Properties()), new Authentication()));
+        when(backendConnection.getSchema()).thenReturn(ProxySchemaContexts.getInstance().getSchema("schema_0"));
+    }
+    
     @Test
     public void assertExecuteSuccess() {
-        MockShardingSphereSchemasUtil.setSchemas("schema", 10);
         mockDatabaseCommunicationEngine(new UpdateResponse());
         BroadcastBackendHandler broadcastBackendHandler = new BroadcastBackendHandler("SET timeout = 1000", backendConnection);
         setBackendHandlerFactory(broadcastBackendHandler);
@@ -67,9 +84,16 @@ public final class BroadcastBackendHandlerTest {
         verify(databaseCommunicationEngine, times(10)).execute();
     }
     
+    private Map<String, SchemaContext> getSchemaContextMap() {
+        Map<String, SchemaContext> result = new HashMap<>(10);
+        for (int i = 0; i < 10; i++) {
+            result.put("schema_" + i, mock(SchemaContext.class));
+        }
+        return result;
+    }
+    
     @Test
     public void assertExecuteFailure() {
-        MockShardingSphereSchemasUtil.setSchemas("schema", 10);
         ErrorResponse errorResponse = new ErrorResponse(new SQLException("no reason", "X999", -1));
         mockDatabaseCommunicationEngine(errorResponse);
         BroadcastBackendHandler broadcastBackendHandler = new BroadcastBackendHandler("SET timeout = 1000", backendConnection);

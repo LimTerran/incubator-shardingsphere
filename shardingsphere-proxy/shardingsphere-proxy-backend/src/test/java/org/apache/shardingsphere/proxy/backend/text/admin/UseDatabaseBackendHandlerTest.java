@@ -17,21 +17,27 @@
 
 package org.apache.shardingsphere.proxy.backend.text.admin;
 
-import org.apache.shardingsphere.sql.parser.sql.statement.dal.dialect.mysql.UseStatement;
+import lombok.SneakyThrows;
 import org.apache.shardingsphere.infra.auth.Authentication;
 import org.apache.shardingsphere.infra.auth.ProxyUser;
-import org.apache.shardingsphere.proxy.backend.MockShardingSphereSchemasUtil;
+import org.apache.shardingsphere.infra.config.properties.ConfigurationProperties;
+import org.apache.shardingsphere.kernel.context.SchemaContext;
+import org.apache.shardingsphere.kernel.context.SchemaContexts;
 import org.apache.shardingsphere.proxy.backend.communication.jdbc.connection.BackendConnection;
 import org.apache.shardingsphere.proxy.backend.response.BackendResponse;
 import org.apache.shardingsphere.proxy.backend.response.error.ErrorResponse;
 import org.apache.shardingsphere.proxy.backend.response.update.UpdateResponse;
-import org.apache.shardingsphere.proxy.context.ShardingSphereProxyContext;
+import org.apache.shardingsphere.proxy.backend.schema.ProxySchemaContexts;
+import org.apache.shardingsphere.sql.parser.sql.statement.dal.dialect.mysql.UseStatement;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -48,11 +54,21 @@ public final class UseDatabaseBackendHandlerTest {
     private BackendConnection backendConnection;
     
     @Before
+    @SneakyThrows(ReflectiveOperationException.class)
     public void setUp() {
-        MockShardingSphereSchemasUtil.setSchemas("schema", 10);
         backendConnection = mock(BackendConnection.class);
         when(backendConnection.getUserName()).thenReturn("root");
-        ShardingSphereProxyContext.getInstance().init(getAuthentication(), new Properties());
+        Field schemaContexts = ProxySchemaContexts.getInstance().getClass().getDeclaredField("schemaContexts");
+        schemaContexts.setAccessible(true);
+        schemaContexts.set(ProxySchemaContexts.getInstance(), new SchemaContexts(getSchemaContextMap(), new ConfigurationProperties(new Properties()), getAuthentication()));
+    }
+    
+    private Map<String, SchemaContext> getSchemaContextMap() {
+        Map<String, SchemaContext> result = new HashMap<>(10);
+        for (int i = 0; i < 10; i++) {
+            result.put("schema_" + i, mock(SchemaContext.class));
+        }
+        return result;
     }
     
     private Authentication getAuthentication() {

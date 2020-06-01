@@ -27,9 +27,13 @@ import org.apache.shardingsphere.db.protocol.mysql.packet.generic.MySQLErrPacket
 import org.apache.shardingsphere.db.protocol.mysql.packet.generic.MySQLOKPacket;
 import org.apache.shardingsphere.db.protocol.mysql.packet.handshake.MySQLHandshakePacket;
 import org.apache.shardingsphere.db.protocol.mysql.payload.MySQLPacketPayload;
+import org.apache.shardingsphere.infra.auth.Authentication;
+import org.apache.shardingsphere.infra.config.properties.ConfigurationProperties;
+import org.apache.shardingsphere.kernel.context.SchemaContext;
+import org.apache.shardingsphere.kernel.context.SchemaContexts;
+import org.apache.shardingsphere.kernel.context.schema.ShardingSphereSchema;
 import org.apache.shardingsphere.proxy.backend.communication.jdbc.connection.BackendConnection;
-import org.apache.shardingsphere.proxy.backend.schema.ShardingSphereSchema;
-import org.apache.shardingsphere.proxy.backend.schema.ShardingSphereSchemas;
+import org.apache.shardingsphere.proxy.backend.schema.ProxySchemaContexts;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,6 +42,7 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -127,11 +132,12 @@ public final class MySQLAuthenticationEngineTest {
     }
     
     private void setSchemas(final Map<String, ShardingSphereSchema> schemas) throws NoSuchFieldException, IllegalAccessException {
-        Field field = ShardingSphereSchemas.class.getDeclaredField("schemas");
+        Field field = ProxySchemaContexts.getInstance().getClass().getDeclaredField("schemaContexts");
         field.setAccessible(true);
-        field.set(ShardingSphereSchemas.getInstance(), schemas);
+        field.set(ProxySchemaContexts.getInstance(), 
+                new SchemaContexts(Collections.singletonMap("sharding_db", mock(SchemaContext.class)), new ConfigurationProperties(new Properties()), new Authentication()));
     }
-
+    
     private MySQLPacketPayload getPayload(final String userName, final String database, final byte[] authResponse) {
         MySQLPacketPayload result = mock(MySQLPacketPayload.class);
         when(result.readInt4()).thenReturn(MySQLCapabilityFlag.CLIENT_CONNECT_WITH_DB.getValue());
