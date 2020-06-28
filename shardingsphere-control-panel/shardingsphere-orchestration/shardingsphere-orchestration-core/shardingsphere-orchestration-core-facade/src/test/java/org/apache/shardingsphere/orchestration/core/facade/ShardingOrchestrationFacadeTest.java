@@ -19,6 +19,7 @@ package org.apache.shardingsphere.orchestration.core.facade;
 
 import org.apache.shardingsphere.infra.auth.Authentication;
 import org.apache.shardingsphere.infra.auth.ProxyUser;
+import org.apache.shardingsphere.metrics.configuration.config.MetricsConfiguration;
 import org.apache.shardingsphere.orchestration.center.RegistryCenterRepository;
 import org.apache.shardingsphere.orchestration.center.config.CenterConfiguration;
 import org.apache.shardingsphere.orchestration.center.config.OrchestrationConfiguration;
@@ -69,15 +70,15 @@ public final class ShardingOrchestrationFacadeTest {
     @Before
     public void setUp() {
         Map<String, CenterConfiguration> instanceConfigurationMap = new HashMap<>();
-        CenterConfiguration configuration1 = new CenterConfiguration("SecondTestRegistryCenter");
+        CenterConfiguration configuration1 = new CenterConfiguration("SecondTestRegistryCenter", new Properties());
         configuration1.setOrchestrationType("registry_center");
         configuration1.setNamespace("namespace_1");
         instanceConfigurationMap.put("test_name_1", configuration1);
-        CenterConfiguration configuration2 = new CenterConfiguration("FirstTestConfigCenter");
+        CenterConfiguration configuration2 = new CenterConfiguration("FirstTestConfigCenter", new Properties());
         configuration2.setOrchestrationType("config_center");
         configuration2.setNamespace("namespace_2");
         instanceConfigurationMap.put("test_name_2", configuration2);
-        CenterConfiguration configuration3 = new CenterConfiguration("FirstTestConfigCenter");
+        CenterConfiguration configuration3 = new CenterConfiguration("FirstTestConfigCenter", new Properties());
         configuration3.setOrchestrationType("metadata_center");
         configuration3.setNamespace("namespace_3");
         instanceConfigurationMap.put("test_name_3", configuration3);
@@ -99,10 +100,18 @@ public final class ShardingOrchestrationFacadeTest {
         authentication.getUsers().put("root", proxyUser);
         Properties props = new Properties();
         shardingOrchestrationFacade.init(Collections.singletonMap("sharding_db", dataSourceConfigurationMap), ruleConfigurationMap, authentication, props);
-        verify(configCenter).persistConfigurations("sharding_db", dataSourceConfigurationMap, ruleConfigurationMap.get("sharding_db"), authentication, props, false);
+        verify(configCenter).persistConfigurations("sharding_db", dataSourceConfigurationMap, ruleConfigurationMap.get("sharding_db"), false);
+        verify(configCenter).persistGlobalConfiguration(authentication, props, false);
         verify(registryCenter).persistInstanceOnline();
         verify(registryCenter).persistDataSourcesNode();
         verify(listenerManager).initListeners();
+    }
+    
+    @Test
+    public void assertInitMetricsConfiguration() {
+        MetricsConfiguration metricsConfiguration = new MetricsConfiguration("fixture", null, null, false, 8, null);
+        shardingOrchestrationFacade.initMetricsConfiguration(metricsConfiguration);
+        verify(configCenter).persistMetricsConfiguration(metricsConfiguration, false);
     }
     
     @Test

@@ -98,7 +98,7 @@ shardingRule:
           inline:
             shardingColumn: k
             algorithmExpression: tbl${k % 1024}
-        keyGenerator:
+        keyGenerateStrategy:
             type: SNOWFLAKE
             column: id
     defaultDatabaseStrategy:
@@ -220,7 +220,7 @@ shardingRule:
         inline:
           shardingColumn: k
           algorithmExpression: tbl${k % 1024}
-      keyGenerator:
+      keyGenerateStrategy:
         type: SNOWFLAKE
         column: id
   bindingTables:
@@ -251,22 +251,22 @@ shardingRule:
       loadBalanceAlgorithmType: ROUND_ROBIN
 encryptRule:
   encryptors:
-    encryptor_aes:
-      type: aes
+    aes_encryptor:
+      type: AES
       props:
         aes.key.value: 123456abc
-    encryptor_md5:
-      type: md5
+    md5_encryptor:
+      type: MD5
   tables:
     sbtest:
       columns:
         c:
           plainColumn: c_plain
           cipherColumn: c_cipher
-          encryptor: encryptor_aes
+          encryptorName: aes_encryptor
         pad:
           cipherColumn: pad_cipher
-          encryptor: encryptor_md5    
+          encryptorName: md5_encryptor    
 ```
 
 #### Full Route Configuration
@@ -315,7 +315,7 @@ shardingRule:
         inline:
           shardingColumn: k
           algorithmExpression: tbl1
-      keyGenerator:
+      keyGenerateStrategy:
           type: SNOWFLAKE
           column: id
   defaultDatabaseStrategy:

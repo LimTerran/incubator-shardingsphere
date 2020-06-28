@@ -37,7 +37,7 @@ password: root
 
 ### config/props
 
-Properties configuration. Please refer to [Configuration Manual](/en/manual/shardingsphere-jdbc/configuration/) for more details.
+Properties configuration. Please refer to [Configuration Manual](/en/user-manual/shardingsphere-jdbc/configuration/) for more details.
 
 ```yaml
 executor.size: 20
@@ -51,7 +51,7 @@ A collection of multiple database connection pools, whose properties (e.g. DBCP,
 ```yaml
 ds_0: !!org.apache.shardingsphere.orchestration.core.configuration.YamlDataSourceConfiguration
   dataSourceClassName: com.zaxxer.hikari.HikariDataSource
-  properties:
+  props:
     url: jdbc:mysql://127.0.0.1:3306/demo_ds_0?serverTimezone=UTC&useSSL=false
     password: null
     maxPoolSize: 50
@@ -63,7 +63,7 @@ ds_0: !!org.apache.shardingsphere.orchestration.core.configuration.YamlDataSourc
     maxLifetimeMilliseconds: 1800000
 ds_1: !!org.apache.shardingsphere.orchestration.core.configuration.YamlDataSourceConfiguration
   dataSourceClassName: com.zaxxer.hikari.HikariDataSource
-  properties:
+  props:
     url: jdbc:mysql://127.0.0.1:3306/demo_ds_1?serverTimezone=UTC&useSSL=false
     password: null
     maxPoolSize: 50

@@ -19,10 +19,10 @@ package org.apache.shardingsphere.encrypt.log;
 
 import com.google.common.collect.ImmutableMap;
 import lombok.SneakyThrows;
-import org.apache.shardingsphere.encrypt.api.config.EncryptColumnRuleConfiguration;
 import org.apache.shardingsphere.encrypt.api.config.EncryptRuleConfiguration;
-import org.apache.shardingsphere.encrypt.api.config.EncryptTableRuleConfiguration;
-import org.apache.shardingsphere.encrypt.api.config.EncryptorRuleConfiguration;
+import org.apache.shardingsphere.encrypt.api.config.rule.EncryptColumnRuleConfiguration;
+import org.apache.shardingsphere.encrypt.api.config.rule.EncryptTableRuleConfiguration;
+import org.apache.shardingsphere.infra.config.algorithm.ShardingSphereAlgorithmConfiguration;
 import org.apache.shardingsphere.infra.log.ConfigurationLogger;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,29 +67,29 @@ public final class EncryptConfigurationLoggerTest {
         String yaml = "rules:\n"
                 + "- !ENCRYPT\n"
                 + "  encryptors:\n"
-                + "    encryptor_aes:\n"
+                + "    aes_encryptor:\n"
                 + "      props:\n"
                 + "        aes.key.value: 123456abc\n"
-                + "      type: aes\n"
+                + "      type: AES\n"
                 + "  tables:\n"
                 + "    t_encrypt:\n"
                 + "      columns:\n"
                 + "        user_id:\n"
                 + "          assistedQueryColumn: user_assisted\n"
                 + "          cipherColumn: user_encrypt\n"
-                + "          encryptor: encryptor_aes\n"
+                + "          encryptorName: aes_encryptor\n"
                 + "          plainColumn: user_decrypt\n";
         assertLogInfo(yaml);
-        ConfigurationLogger.log(Collections.singletonList(getEncryptRuleConfiguration()));
+        ConfigurationLogger.log(Collections.singletonList(getEncryptConfiguration()));
     }
     
-    private EncryptRuleConfiguration getEncryptRuleConfiguration() {
-        Properties properties = new Properties();
-        properties.put("aes.key.value", "123456abc");
-        EncryptorRuleConfiguration encryptorRuleConfiguration = new EncryptorRuleConfiguration("aes", properties);
-        EncryptTableRuleConfiguration tableRuleConfiguration =
-                new EncryptTableRuleConfiguration(Collections.singletonMap("user_id", new EncryptColumnRuleConfiguration("user_decrypt", "user_encrypt", "user_assisted", "encryptor_aes")));
-        return new EncryptRuleConfiguration(ImmutableMap.of("encryptor_aes", encryptorRuleConfiguration), ImmutableMap.of("t_encrypt", tableRuleConfiguration));
+    private EncryptRuleConfiguration getEncryptConfiguration() {
+        Properties props = new Properties();
+        props.put("aes.key.value", "123456abc");
+        ShardingSphereAlgorithmConfiguration encryptAlgorithmConfiguration = new ShardingSphereAlgorithmConfiguration("AES", props);
+        EncryptTableRuleConfiguration encryptTableRuleConfiguration = new EncryptTableRuleConfiguration(
+                "t_encrypt", Collections.singleton(new EncryptColumnRuleConfiguration("user_id", "user_encrypt", "user_assisted", "user_decrypt", "aes_encryptor")));
+        return new EncryptRuleConfiguration(Collections.singleton(encryptTableRuleConfiguration), ImmutableMap.of("aes_encryptor", encryptAlgorithmConfiguration));
     }
     
     private void assertLogInfo(final String logContent) {

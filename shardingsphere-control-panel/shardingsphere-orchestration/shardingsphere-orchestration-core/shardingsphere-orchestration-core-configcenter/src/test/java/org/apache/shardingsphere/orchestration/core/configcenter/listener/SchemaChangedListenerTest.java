@@ -19,7 +19,8 @@ package org.apache.shardingsphere.orchestration.core.configcenter.listener;
 
 import lombok.SneakyThrows;
 import org.apache.shardingsphere.encrypt.api.config.EncryptRuleConfiguration;
-import org.apache.shardingsphere.encrypt.api.config.EncryptorRuleConfiguration;
+import org.apache.shardingsphere.infra.config.RuleConfiguration;
+import org.apache.shardingsphere.infra.config.algorithm.ShardingSphereAlgorithmConfiguration;
 import org.apache.shardingsphere.masterslave.api.config.MasterSlaveRuleConfiguration;
 import org.apache.shardingsphere.orchestration.center.ConfigCenterRepository;
 import org.apache.shardingsphere.orchestration.center.listener.DataChangedEvent;
@@ -31,7 +32,6 @@ import org.apache.shardingsphere.orchestration.core.common.event.SchemaAddedEven
 import org.apache.shardingsphere.orchestration.core.common.event.SchemaDeletedEvent;
 import org.apache.shardingsphere.orchestration.core.common.event.ShardingOrchestrationEvent;
 import org.apache.shardingsphere.sharding.api.config.ShardingRuleConfiguration;
-import org.apache.shardingsphere.infra.config.RuleConfiguration;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,7 +42,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -97,7 +96,7 @@ public final class SchemaChangedListenerTest {
         assertThat(((RuleConfigurationsChangedEvent) actual).getShardingSchemaName(), is("sharding_db"));
         Collection<RuleConfiguration> ruleConfigurations = ((RuleConfigurationsChangedEvent) actual).getRuleConfigurations();
         assertThat(ruleConfigurations.size(), is(1));
-        assertThat(((ShardingRuleConfiguration) ruleConfigurations.iterator().next()).getTableRuleConfigs().size(), is(1));
+        assertThat(((ShardingRuleConfiguration) ruleConfigurations.iterator().next()).getTables().size(), is(1));
     }
     
     @Test
@@ -124,10 +123,9 @@ public final class SchemaChangedListenerTest {
         assertThat(event.getRuleConfigurations().iterator().next(), instanceOf(EncryptRuleConfiguration.class));
         EncryptRuleConfiguration encryptRuleConfiguration = (EncryptRuleConfiguration) event.getRuleConfigurations().iterator().next();
         assertThat(encryptRuleConfiguration.getEncryptors().size(), is(1));
-        Entry<String, EncryptorRuleConfiguration> entry = encryptRuleConfiguration.getEncryptors().entrySet().iterator().next();
-        assertThat(entry.getKey(), is("order_encryptor"));
-        assertThat(entry.getValue().getType(), is("aes"));
-        assertThat(entry.getValue().getProperties().get("aes.key.value").toString(), is("123456"));
+        ShardingSphereAlgorithmConfiguration encryptAlgorithmConfiguration = encryptRuleConfiguration.getEncryptors().get("order_encryptor");
+        assertThat(encryptAlgorithmConfiguration.getType(), is("AES"));
+        assertThat(encryptAlgorithmConfiguration.getProps().get("aes.key.value").toString(), is("123456"));
     }
     
     @Test

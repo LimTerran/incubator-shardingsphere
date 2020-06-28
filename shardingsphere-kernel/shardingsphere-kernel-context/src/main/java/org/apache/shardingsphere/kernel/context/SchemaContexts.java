@@ -27,38 +27,42 @@ import java.util.Map;
 import java.util.Properties;
 
 @Getter
-public final class SchemaContexts {
+public final class SchemaContexts implements SchemaContextsAware {
     
     private final Map<String, SchemaContext> schemaContexts = new HashMap<>();
     
-    private final ConfigurationProperties properties;
+    private final ConfigurationProperties props;
     
     private final Authentication authentication;
     
+    private final boolean isCircuitBreak;
+    
     public SchemaContexts() {
-        properties = new ConfigurationProperties(new Properties());
+        props = new ConfigurationProperties(new Properties());
         authentication = new Authentication();
+        isCircuitBreak = false;
     }
     
-    public SchemaContexts(final Map<String, SchemaContext> schemaContexts, final ConfigurationProperties properties, final Authentication authentication) {
+    public SchemaContexts(final Map<String, SchemaContext> schemaContexts, final ConfigurationProperties props, final Authentication authentication) {
         this.schemaContexts.putAll(schemaContexts);
-        this.properties = properties;
+        this.props = props;
         this.authentication = authentication;
+        isCircuitBreak = false;
     }
     
-    /**
-     * Get default schema context.
-     * 
-     * @return default schema context
-     */
+    public SchemaContexts(final Map<String, SchemaContext> schemaContexts, final ConfigurationProperties props, final Authentication authentication, final boolean isCircuitBreak) {
+        this.schemaContexts.putAll(schemaContexts);
+        this.props = props;
+        this.authentication = authentication;
+        this.isCircuitBreak = isCircuitBreak;
+    }
+    
+    @Override
     public SchemaContext getDefaultSchemaContext() {
         return schemaContexts.get(DefaultSchema.LOGIC_NAME);
     }
     
-    /**
-     * Close.
-     * 
-     */
+    @Override
     public void close() {
         for (SchemaContext each : schemaContexts.values()) {
             each.getRuntimeContext().getExecutorKernel().close();

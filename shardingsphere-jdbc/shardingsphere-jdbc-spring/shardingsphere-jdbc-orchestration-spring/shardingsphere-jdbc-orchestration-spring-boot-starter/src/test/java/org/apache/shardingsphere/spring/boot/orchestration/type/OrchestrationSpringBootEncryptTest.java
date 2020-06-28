@@ -21,8 +21,9 @@ import lombok.SneakyThrows;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.shardingsphere.driver.jdbc.core.datasource.ShardingSphereDataSource;
 import org.apache.shardingsphere.driver.orchestration.internal.datasource.OrchestrationShardingSphereDataSource;
+import org.apache.shardingsphere.encrypt.algorithm.config.AlgorithmProvidedEncryptRuleConfiguration;
+import org.apache.shardingsphere.encrypt.spi.EncryptAlgorithm;
 import org.apache.shardingsphere.spring.boot.orchestration.util.EmbedTestingServer;
-import org.apache.shardingsphere.encrypt.api.config.EncryptRuleConfiguration;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -63,12 +64,12 @@ public class OrchestrationSpringBootEncryptTest {
         BasicDataSource embedDataSource = (BasicDataSource) shardingSphereDataSource.getDataSourceMap().values().iterator().next();
         assertThat(embedDataSource.getMaxTotal(), is(100));
         assertThat(embedDataSource.getUsername(), is("sa"));
-        EncryptRuleConfiguration configuration = 
-                (EncryptRuleConfiguration) shardingSphereDataSource.getSchemaContexts().getDefaultSchemaContext().getSchema().getConfigurations().iterator().next();
+        AlgorithmProvidedEncryptRuleConfiguration configuration =
+                (AlgorithmProvidedEncryptRuleConfiguration) shardingSphereDataSource.getSchemaContexts().getDefaultSchemaContext().getSchema().getConfigurations().iterator().next();
         assertThat(configuration.getEncryptors().size(), is(1));
-        assertTrue(configuration.getEncryptors().containsKey("order_encrypt"));
-        assertThat(configuration.getEncryptors().get("order_encrypt").getType(), is("aes"));
+        EncryptAlgorithm encryptAlgorithm = configuration.getEncryptors().get("order_encrypt");
+        assertThat(encryptAlgorithm.getType(), is("AES"));
         assertThat(configuration.getTables().size(), is(1));
-        assertThat(configuration.getTables().get("t_order").getColumns().get("order_id").getCipherColumn(), is("cipher_order_id"));
+        assertThat(configuration.getTables().iterator().next().getColumns().iterator().next().getCipherColumn(), is("cipher_order_id"));
     }
 }

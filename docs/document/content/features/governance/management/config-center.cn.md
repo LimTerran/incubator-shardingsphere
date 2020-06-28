@@ -37,7 +37,7 @@ password: root
 
 ### config/props
 
-属性配置，详情请参见[配置手册](/cn/manual/shardingsphere-jdbc/configuration/)。
+属性配置，详情请参见[配置手册](/cn/user-manual/shardingsphere-jdbc/configuration/)。
 
 ```yaml
 executor.size: 20
@@ -51,7 +51,7 @@ sql.show: true
 ```yaml
 ds_0: !!org.apache.shardingsphere.orchestration.core.configuration.YamlDataSourceConfiguration
   dataSourceClassName: com.zaxxer.hikari.HikariDataSource
-  properties:
+  props:
     url: jdbc:mysql://127.0.0.1:3306/demo_ds_0?serverTimezone=UTC&useSSL=false
     password: null
     maxPoolSize: 50
@@ -63,7 +63,7 @@ ds_0: !!org.apache.shardingsphere.orchestration.core.configuration.YamlDataSourc
     maxLifetimeMilliseconds: 1800000
 ds_1: !!org.apache.shardingsphere.orchestration.core.configuration.YamlDataSourceConfiguration
   dataSourceClassName: com.zaxxer.hikari.HikariDataSource
-  properties:
+  props:
     url: jdbc:mysql://127.0.0.1:3306/demo_ds_1?serverTimezone=UTC&useSSL=false
     password: null
     maxPoolSize: 50
